@@ -12,5 +12,5 @@ void Clock_Config(void)
 	RCC->CFGR |= 0x00009400;// APB1 Prescaler=4, APB2 Prescaler=2
 	RCC->CIR |= 0x00080000; //HSERDY Flag is cleared.
 	RCC->CIR |= 0x00800000; //CSS Flag is cleared.
-	RCC->AHB1RSTR |= 0x0000000F;//GPIO A/B/C/D Ports reset.
+	//RCC->AHB1RSTR |= 0x0000000F;//GPIO A/B/C/D Ports reset.
 }
