@@ -1,16 +1,16 @@
 void Clock_Config(void)
 {
-	RCC->CR |=0x01010000;// HSEON and PLLON is enabled.
-	while(!RCC->CR&0x00020000);//Wait for HSERDY to 1.
-	RCC->CR |=0x00080000;// CSS enable.
-	RCC->PLLCFGR |=0x00400000;// PLLSRC is choosen HSE.
+	RCC->CR |= (1<<16)|(1<<24);// HSEON and PLLON is enabled.
+	while(!RCC->CR&(1<<17));//Wait for HSERDY to 1.
+	RCC->CR |=(1<<19);// CSS enable.
+	RCC->PLLCFGR |=(1<<22);// PLLSRC is choosen HSE.
 	//SYSCLK=[(HSE/PLLM)*PLLN]/PLLP
-	RCC->PLLCFGR |=0x00000004;//PLLM=4
-	RCC->PLLCFGR |=0x002A00;//PLLN=168
+	RCC->PLLCFGR |=(1<<2);//PLLM=4
+	RCC->PLLCFGR |=(1<<9)|(1<<11)|(1<<13);//PLLN=168
 	RCC->PLLCFGR |=0x00000000;//PLLP=2
 	RCC->CFGR |= 0X00000000;// AHB Prescaler=1
-	RCC->CFGR |= 0x00009400;// APB1 Prescaler=4, APB2 Prescaler=2
-	RCC->CIR |= 0x00080000; //HSERDY Flag is cleared.
-	RCC->CIR |= 0x00800000; //CSS Flag is cleared.
-	//RCC->AHB1RSTR |= 0x0000000F;//GPIO A/B/C/D Ports reset.
+	RCC->CFGR |= (1<<10)|(1<<12)|(1<<15);// APB1 Prescaler=4, APB2 Prescaler=2
+	RCC->CIR |= (1<<19); //HSERDY Flag is cleared.
+	RCC->CIR |= (1<<23); //CSS Flag is cleared.
+	//RCC->AHB1RSTR |= (1<<0)|(1<<1)|(1<<2)|(1<<3);//GPIO A/B/C/D Ports reset.
 }
