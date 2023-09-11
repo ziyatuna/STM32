@@ -47,7 +47,7 @@ void EXTI_Config(void)
 	SYSCFG->EXTICR[0]|= 0;//Set  interrupt to come from port a.
 	EXTI->IMR |= (1<<0); //Set interrupt to come from  zeroth pin.
 	EXTI->RTSR |= (1<<0); // Set interrupt to occur on rising edge.
-	NVIC->ISER[0]|=(1<<6);//EXTIO interrupt is activated.
+	NVIC->ISER[0]|=(1<<6);//EXTI0 interrupt is activated.
 }
 void EXTI0_IRQHandler(void)
 {
