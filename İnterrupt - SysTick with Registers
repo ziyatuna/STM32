@@ -1,0 +1,56 @@
+#include "stm32f4xx.h"
+void Clock_Config(void);
+void GPIO_Config(void);
+void SysTick_Conf(void);
+void SysTick_Handler(void);
+int main(void)
+{
+   Clock_Config();
+   GPIO_Config();
+   SysTick_Conf();
+   while (1)
+   {
+
+   }
+}
+
+
+void Clock_Config(void)
+{
+	RCC->CR |= (1<<16)|(1<<24);// HSEON and PLLON is enabled.
+	while(!(RCC->CR&(1<<17)));//Wait for HSERDY to 1.
+	RCC->CR |=(1<<19);// CSS enable.
+	RCC->PLLCFGR |=(1<<22);// PLLSRC is choosen HSE.
+	//SYSCLK=[(HSE/PLLM)*PLLN]/PLLP
+	RCC->PLLCFGR |=(1<<2);//PLLM=4
+	RCC->PLLCFGR |=(1<<9)|(1<<11)|(1<<13);//PLLN=168
+	RCC->PLLCFGR |=0;//PLLP=2
+	RCC->CFGR |= 0;// AHB Prescaler=1
+	RCC->CFGR |= (1<<10)|(1<<12)|(1<<15);// APB1 Prescaler=4, APB2 Prescaler=2
+	RCC->CIR |= (1<<19); //HSERDY Flag is cleared.
+	RCC->CIR |= (1<<23); //CSS Flag is cleared.
+	//RCC->AHB1RSTR |= (1<<0)|(1<<1)|(1<<2)|(1<<3);//GPIO A/B/C/D Ports reset.
+}
+
+void GPIO_Config(void)
+{
+	RCC->AHB1ENR|=(1<<3);//Set GPIOD
+	GPIOD->MODER|=(1<<24)|(1<<26)|(1<<28)|(1<<30);//Set led
+}
+void SysTick_Conf(void)
+{
+	SysTick->CTRL |=(1<<2);
+	SysTick->VAL=0;
+	SysTick->LOAD=0x00F423FF;
+	SysTick->CTRL  |=(1<<0);
+	SysTick->CTRL |=(1<<1);
+	NVIC->ISER[0]|=0xFFFFFFFF;//SysTick interrupt is activated.
+
+}
+
+void SysTick_Handler(void)
+{
+
+	GPIOD->ODR ^=(1<<14);
+
+}
