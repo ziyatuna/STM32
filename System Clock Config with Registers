@@ -1,6 +1,6 @@
 void Clock_Config(void)
 {
-uint16_t PLL_M=8, PLL_P=2, PLL_Q=7, PLL_N=336,PLL_Source_HSE=1,PLL_VCO,temp;
+uint16_t PLL_M=8, PLL_P=2, PLL_Q=7, PLL_N=336,PLL_Source_HSE=1,PLL_VCO,tmp;
 /* PLL_VCO = (HSE_VALUE or HSI_VALUE / PLL_M) * PLL_N 	      
 	       SYSCLK = PLL_VCO / PLL_P */
 	 RCC->CR |= (0x1UL<<16); //HSEON
