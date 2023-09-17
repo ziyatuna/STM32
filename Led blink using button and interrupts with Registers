@@ -18,19 +18,55 @@ int main(void)
 
 void Clock_Config(void)
 {
-	RCC->CR |= (1<<16)|(1<<24);// HSEON and PLLON is enabled.
-	while(!(RCC->CR&(1<<17)));//Wait for HSERDY to 1.
-	RCC->CR |=(1<<19);// CSS enable.
-	RCC->PLLCFGR |=(1<<22);// PLLSRC is choosen HSE.
-	//SYSCLK=[(HSE/PLLM)*PLLN]/PLLP
-	RCC->PLLCFGR |=(1<<2);//PLLM=4
-	RCC->PLLCFGR |=(1<<9)|(1<<11)|(1<<13);//PLLN=168
-	RCC->PLLCFGR |=0;//PLLP=2
-	RCC->CFGR |= 0;// AHB Prescaler=1
-	RCC->CFGR |= (1<<10)|(1<<12)|(1<<15);// APB1 Prescaler=4, APB2 Prescaler=2
-	RCC->CIR |= (1<<19); //HSERDY Flag is cleared.
-	RCC->CIR |= (1<<23); //CSS Flag is cleared.
-	//RCC->AHB1RSTR |= (1<<0)|(1<<1)|(1<<2)|(1<<3);//GPIO A/B/C/D Ports reset.
+uint16_t PLL_M=8, PLL_P=2, PLL_Q=7, PLL_N=336,PLL_Source_HSE=1,PLL_VCO,temp;
+	 RCC->CR |= (0x1UL<<16); //HSEON
+	 while (!(RCC->CR & (0x1UL<<17))); //Wait HSERDY flag
+	 RCC->APB1ENR |= 1<<28; //APB1 enable
+	 PWR->CR |= 1<<14; //Regulator voltage scaling 1
+	 RCC->CFGR  =  (RCC->CFGR & ~(0xFUL << 4)) | 0x1400UL | (0x1UL<<15); //HPRE = 1, APB1 = 4, APB2 = 2
+	 RCC->PLLCFGR = ((RCC->PLLCFGR & ~(0x3FUL<<0)) | (PLL_M << 0)); //PLL_M = 8
+	 RCC->PLLCFGR = ((RCC->PLLCFGR & ~(0x1FFUL)) | (PLL_N << 6)); //PLL_N = 336
+	 RCC->PLLCFGR = (RCC->PLLCFGR & ~(0x3UL<<16)); //PLL_P = 2
+	 RCC->PLLCFGR = ((RCC->PLLCFGR & ~(0xFUL<<24)) | (PLL_Q << 24)); //PLL_Q = 7
+	 RCC->PLLCFGR = (RCC->PLLCFGR & ~(0x1UL<<22)) | (PLL_Source_HSE<<22); //PLL Source HSE
+	 RCC->CR |= (0x1UL<<24); //PLLON
+	 while ((RCC->CR & (1<<25)) == 0); // Wait for PLLRDY flag
+	 FLASH->ACR |= (1<<8) | (1<<9)| (1<<10)| (5<<0); //5 wait states, Prefetch-Instruction-Data cache enable
+	 RCC->CFGR = ((RCC->CFGR & ~(0x3UL<<0)) | (1 << 1));// PLL selected as system clock
+	 while ((RCC->CFGR & (0x3UL<<2) != 0x8UL)); //Wait for PLL flag
+
+	 tmp = RCC->CFGR & (0x3UL << 2); //System Clock Status
+	 switch (tmp)
+	 {
+	   case 0x00:  /* HSI used as system clock source */
+	     SystemCoreClock = HSI_VALUE;
+	     break;
+	   case 0x04:  /* HSE used as system clock source */
+	     SystemCoreClock = HSE_VALUE;
+	     break;
+	   case 0x08:  /* PLL used as system clock source */
+	     /* PLL_VCO = (HSE_VALUE or HSI_VALUE / PLL_M) * PLL_N 	      
+	       SYSCLK = PLL_VCO / PLL_P */
+	     if (PLL_Source_HSE != 0)
+	     {
+	       /* HSE used as PLL clock source */
+	       PLL_VCO = (HSE_VALUE / PLL_M) * (PLL_N);
+	     }
+	     else
+	     {
+	       /* HSI used as PLL clock source */
+	       PLL_VCO = (HSI_VALUE / PLL_M) * (PLL_N);
+	     }
+	     SystemCoreClock = PLL_VCO/PLL_P;
+	     break;
+	   default:
+	     SystemCoreClock = HSI_VALUE;
+	     break;
+	 }
+	 // Get HCLK prescaler 
+	 tmp = AHBPrescTable[((RCC->CFGR & (0xFUL << 4)) >> 4)];
+	 // HCLK frequency 
+	 SystemCoreClock >>= tmp;
 }
 
 void GPIO_Config(void)
