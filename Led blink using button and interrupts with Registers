@@ -18,7 +18,7 @@ int main(void)
 
 void Clock_Config(void)
 {
-uint16_t PLL_M=8, PLL_P=2, PLL_Q=7, PLL_N=336,PLL_Source_HSE=1,PLL_VCO,tmp;
+uint32_t PLL_M=8, PLL_P=2, PLL_Q=7, PLL_N=336,PLL_Source_HSE=1,PLL_VCO,tmp;
 	 RCC->CR |= (0x1UL<<16); //HSEON
 	 while (!(RCC->CR & (0x1UL<<17))); //Wait HSERDY flag
 	 RCC->APB1ENR |= 1<<28; //APB1 enable
