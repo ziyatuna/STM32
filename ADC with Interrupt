@@ -1,0 +1,123 @@
+/*In this project, an adc application that reads
+ the value from the potentiometer when the button
+ is pressed. Each time the button is pressed,
+ the "voltage" variable reads the incoming value
+ and an led flashes. The voltage input from the
+ potentiometer is connected to the B1 pin.
+ The button is connected to pin A0.
+ You can read the "voltage" variable
+ from the debug screen.  */
+#include "stm32f4xx.h"
+void Clock_Config(void);
+void GPIO_Config(void);
+void EXTI_Config(void);
+void ADC_Config(void);
+void EXTI0_IRQHandler(void);
+void ADC_IRQHandler(void);
+volatile static double voltage, Vref=3;
+uint32_t adcValue=0;
+int main(void)
+{
+  Clock_Config();
+  GPIO_Config();
+  EXTI_Config();
+  ADC_Config();
+
+  while (1)
+  {
+  }
+}
+
+
+
+void EXTI0_IRQHandler(void)
+{
+	EXTI->PR |= (0x1UL << 0);//Reset by set 1 to first bit
+	ADC2->CR2 |= (0x1UL << 30);//Start conversion of regular channels
+}
+void ADC_IRQHandler(void)
+{
+	adcValue=ADC2->DR;
+	voltage=(adcValue)*(Vref/4095);
+	GPIOD->ODR |= (0x1UL << 12);
+	for(uint32_t i=0;i<250000;i++);
+	GPIOD->ODR &= (0x0UL << 12);
+}
+
+void GPIO_Config(void)
+{
+	RCC->AHB1ENR|=(0x1UL<<0)|(0x1UL<<1)|(0x1UL<<3);//Set GPIOA,GPIOB,GPIOD
+	GPIOB->MODER|= (0x3UL << 2);// B1 pin is setted Analog mode
+	GPIOD->MODER |= (1<<24);//
+}
+void ADC_Config(void)
+{
+	RCC->APB2ENR |= (0x1UL << 9);//ADC2 is enabled
+	ADC2->SQR3 |=  (0x8UL << 0) | (0x1UL << 0);// 9. Channel is chosen
+	ADC2->CR2 |= (0x01UL << 0);//ADC is enabled
+	ADC2->SMPR2 |= (0x7UL << 27);// Channel 9 sampling time is selected 480 cycles
+	ADC->CCR |= (0x3UL << 16);// ADC Prescaler is chosen 8, because operating frequency of ADC is 36MHz. 168/8=21MHz
+	ADC2->CR1 |= (0x1UL << 5);//  Interrupt enabled
+	NVIC->ISER[0]|=(1<<18);//ADC interrupt is activated.
+}
+void EXTI_Config(void)
+{
+	RCC->APB2ENR |= (1<<14);// APB2 system clock is enabled.
+	SYSCFG->EXTICR[0]|= 0;//Set  interrupt to come from port a.
+	EXTI->IMR |= (1<<0); //Set interrupt to come from  zeroth pin.
+	EXTI->RTSR |= (1<<0); // Set interrupt to occur on rising edge.
+	NVIC->ISER[0]|=(1<<6);//EXTI0 interrupt is activated.
+}
+void Clock_Config(void)
+{
+uint32_t PLL_M=8, PLL_P=2, PLL_Q=7, PLL_N=336,PLL_Source_HSE=1,PLL_VCO,tmp;
+/* PLL_VCO = (HSE_VALUE or HSI_VALUE / PLL_M) * PLL_N
+	       SYSCLK = PLL_VCO / PLL_P */
+	 RCC->CR |= (0x1UL<<16); //HSEON
+	 while (!(RCC->CR & (0x1UL<<17))); //Wait HSERDY flag
+	 RCC->APB1ENR |= 1<<28; //APB1 enable
+	 PWR->CR |= 1<<14; //Regulator voltage scaling 1
+	 RCC->CFGR  =  (RCC->CFGR & ~(0xFUL << 4)) | 0x1400UL | (0x1UL<<15); //HPRE = 1, APB1 = 4, APB2 = 2
+	 RCC->PLLCFGR = ((RCC->PLLCFGR & ~(0x3FUL<<0)) | (PLL_M << 0)); //PLL_M = 8
+	 RCC->PLLCFGR = ((RCC->PLLCFGR & ~(0x1FFUL)) | (PLL_N << 6)); //PLL_N = 336
+	 RCC->PLLCFGR = (RCC->PLLCFGR & ~(0x3UL<<16)); //PLL_P = 2
+	 RCC->PLLCFGR = ((RCC->PLLCFGR & ~(0xFUL<<24)) | (PLL_Q << 24)); //PLL_Q = 7
+	 RCC->PLLCFGR = (RCC->PLLCFGR & ~(0x1UL<<22)) | (PLL_Source_HSE<<22); //PLL Source HSE
+	 RCC->CR |= (0x1UL<<24); //PLLON
+	 while ((RCC->CR & (1<<25)) == 0); // Wait for PLLRDY flag
+	 FLASH->ACR |= (1<<8) | (1<<9)| (1<<10)| (5<<0); //5 wait states, Prefetch-Instruction-Data cache enable
+	 RCC->CFGR = ((RCC->CFGR & ~(0x3UL<<0)) | (1 << 1));// PLL selected as system clock
+	 while ((RCC->CFGR & (0x3UL<<2)) != 0x8UL); //Wait for PLL flag
+	 tmp = RCC->CFGR & (0x3UL << 2); //System Clock Status
+	 switch (tmp)
+	 {
+	   case 0x00:  /* HSI used as system clock source */
+	     SystemCoreClock = HSI_VALUE;
+	     break;
+	   case 0x04:  /* HSE used as system clock source */
+	     SystemCoreClock = HSE_VALUE;
+	     break;
+	   case 0x08:  /* PLL used as system clock source */
+	     /* PLL_VCO = (HSE_VALUE or HSI_VALUE / PLL_M) * PLL_N
+	       SYSCLK = PLL_VCO / PLL_P */
+	     if (PLL_Source_HSE != 0)
+	     {
+	       /* HSE used as PLL clock source */
+	       PLL_VCO = (HSE_VALUE / PLL_M) * (PLL_N);
+	     }
+	     else
+	     {
+	       /* HSI used as PLL clock source */
+	       PLL_VCO = (HSI_VALUE / PLL_M) * (PLL_N);
+	     }
+	     SystemCoreClock = PLL_VCO/PLL_P;
+	     break;
+	   default:
+	     SystemCoreClock = HSI_VALUE;
+	     break;
+	 }
+	 // Get HCLK prescaler
+	 tmp = AHBPrescTable[((RCC->CFGR & (0xFUL << 4)) >> 4)];
+	 // HCLK frequency
+	 SystemCoreClock >>= tmp;
+}
