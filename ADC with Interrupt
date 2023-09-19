@@ -3,7 +3,7 @@
  is pressed. Each time the button is pressed,
  the "voltage" variable reads the incoming value
  and an led flashes. The voltage input from the
- potentiometer is connected to the B1 pin.
+ potentiometer is connected to the B1 pin(ADC2 Channel 9).
  The button is connected to pin A0.
  You can read the "voltage" variable
  from the debug screen.  */
